@@ -26,13 +26,14 @@ def lib02dict(lib_obj):
 
 
 class Lib0:
-    def __init__(self, DATA=None, PRESERVE_NONE: bool=False, R: bool=False, TYPE_LOCKED: bool=False, META=None, CHILD_TYPE=None) -> None:
+    def __init__(self, DATA=None, PRESERVE_NONE: bool=False, R: bool=False, TYPE_LOCKED: bool=False, META=None, CHILD_TYPE=None, CONST: bool=False) -> None:
         DATA = {} if DATA is None and not PRESERVE_NONE else (dict2lib0(DATA) if R else DATA)
         self._data = DATA._data if isinstance(DATA, Lib0) else DATA
         self._type = type(self._data)
         self._meta = {
             "typelocked": TYPE_LOCKED,
             "childtype": CHILD_TYPE if CHILD_TYPE is not None and self._type == list else None,
+            "const": CONST,
         } if META is None else META
 
     def __getattr__(self, KEY):
@@ -56,6 +57,8 @@ class Lib0:
                 if isinstance(target, Lib0):
                     if target._meta["typelocked"] and not isinstance(VALUE, target._type):
                         raise TypeLockedError(f"Expected the assignment of '{KEY}' to be of type {target._type.__name__}, got {type(VALUE).__name__}")
+                    elif target._meta["const"]:
+                        raise ConstantAssignmentError(f"Cannot reassign constant {KEY}")
                     else:
                         if isinstance(VALUE, Lib0):
                             target._data = VALUE._data
@@ -102,6 +105,8 @@ class Lib0:
                 if isinstance(target, Lib0):
                     if target._meta["typelocked"] and not isinstance(VALUE, target._type):
                         raise TypeLockedError(f"Expected the assignment of '{KEY}' to be of type {target._type.__name__}, got {type(VALUE).__name__}")
+                    if target._meta["const"]:
+                        raise ConstantAssignmentError(f"Cannot reassign constant {KEY}")
                     else:
                         if isinstance(VALUE, Lib0): 
                             target._data = VALUE._data
@@ -128,58 +133,76 @@ class Lib0:
         except: raise Lib0Error(f"Object of type {type(self._data).__name__} does not support item deletion.")
     
     def _int(self):
-        if not self._meta["typelocked"]: 
-            try:
-                self._data = int(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to int.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]: 
+                try:
+                    self._data = int(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to int.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to int. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to int. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     def _float(self):
-        if not self._meta["typelocked"]:
-            try:
-                self._data = float(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to float.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]:
+                try:
+                    self._data = float(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to float.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to float. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to float. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     def _bool(self):
-        if not self._meta["typelocked"]:
-            try:
-                self._data = bool(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to bool.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]:
+                try:
+                    self._data = bool(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to bool.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to bool. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to bool. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     def _str(self):
-        if not self._meta["typelocked"]:
-            try:
-                self._data = str(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to str.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]:
+                try:
+                    self._data = str(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to str.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to str. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to str. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     def _list(self):
-        if not self._meta["typelocked"]:
-            try:
-                self._data = list(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to list.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]:
+                try:
+                    self._data = list(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to list.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to list. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to list. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     def _dict(self):
-        if not self._meta["typelocked"]:
-            try:
-                self._data = dict(self._data)
-                return self
-            except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to dict.")
+        if not self._meta["const"]:
+            if not self._meta["typelocked"]:
+                try:
+                    self._data = dict(self._data)
+                    return self
+                except: raise Lib0Error(f"Cannot convert object of type {type(self._data).__name__} to dict.")
+            else:
+                raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to dict. Type is locked.")
         else:
-            raise TypeLockedError(f"Cannot convert {type(self._data).__name__} to dict. Type is locked.")
+            raise ConstantAssignmentError(f"Cannot modify type of constant")
 
     # String & Representation
     def __str__(self):
