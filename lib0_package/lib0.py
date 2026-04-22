@@ -1,4 +1,3 @@
-from telnetlib3 import EL
 from .exceptions import *
 
 def dict2lib0(data):
