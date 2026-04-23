@@ -1,425 +1,370 @@
-# Lib0 : Dynamic Python Attribute Wrapper
+# Lib0 — Python Dynamic Attribute Wrapper
 
-## **Important : This readme might not be up to date, this is the snapshot branch, use its code only if you know what you're doing** 
+Lib0 is a Python wrapper class that provides JavaScript-style dot notation access to nested data structures. It automatically handles missing nested keys, supports full Python operator compatibility, and adds optional variable metadata like type locking and constants.
 
-## Overview
-Lib0 is a Python wrapper class that provides JavaScript-style dot notation access to nested dictionaries and other data structures. It automatically creates missing nested dictionaries and provides comprehensive type conversion methods while maintaining full Python operator compatibility.
+---
 
-## Core Philosophy
-* Dot notation for intuitive access
-* Auto-creation of missing nested structures
-* Transparent wrapping - behaves like wrapped data
-* Full Python compatibility - all operators work
-* Type-safe conversions with clear error messages
+## Part 1 — The Basics
 
-## Installation
-```
-# Copy the entire Lib0 class and helper functions into your project
-from lib0 import Lib0, dict2lib0, lib02dict
+### Installation
+
+Copy `lib0_package/` into your project and import from it:
+
+```python
+from lib0_package import Lib0, dict2lib0, lib02dict, SetExplicitTypes
 ```
 
-## 1. Basic Usage
-### Creating Objects
-```
-# Empty Lib0 object
+---
+
+### Creating a Lib0 object
+
+```python
+# Empty object (acts as an empty dict)
 obj = Lib0()
 
-# From existing dict (non-recursive)
-obj = Lib0({"x": 1, "y": {"z": 2}})
-
-# From existing dict (recursive - preferred)
-obj = dict2lib0({"x": 1, "y": {"z": 2}})
-
-# With None handling
-obj = Lib0(None)                    # Creates empty dict {}
-obj = Lib0(None, PRESERVE_NONE=True)  # Creates Lib0(None) - rarely needed
-```
-
-### Attribute Access
-```
-obj = Lib0()
-
-# Set values
-obj.name = "Lib0"
-obj.config.database.host = "localhost"
-obj.config.database.port = 5432
-
-# Get values
-print(obj.name)                    # "Lib0"
-print(obj.config.database.host)    # "localhost"
-
-# Auto-creation of nested dicts
-obj.a.b.c = "value"                # Creates a, b as empty dicts
-```
-
-### Index Access (Brackets)
-```
-obj = Lib0()
-
-# Dict-style access
-obj["x"] = 1
-print(obj["x"])                    # 1
-
-# Auto-creation works here too
-print(obj["new"]["nested"])        # Creates and returns empty Lib0
-
-# Mixed notation
-obj.data["users"].john.age = 30
-```
-
-## 2. Type Conversion System
-### Mutation Methods (Change the value)
-```
-obj = Lib0("42")
-obj._int()                         # obj._data becomes 42 (int)
-obj._float()                       # obj._data becomes 42.0 (float)
-obj._str()                         # obj._data becomes "42.0" (str)
-
-# Chaining supported
-obj = Lib0("3.14")._float()._int() # obj._data becomes 3 (int)
-```
-
-### Conversion Methods (Return converted value)
-```
-obj = Lib0("42")
-print(obj.int())                   # 42 (returns int)
-print(obj.float())                 # 42.0 (returns float)
-print(obj.str())                   # "42" (returns str)
-print(obj.bool())                  # True (returns bool)
-```
-
-### Python Protocol Conversions
-```
-obj = Lib0("42")
-print(int(obj))                    # 42 (calls __int__)
-print(float(obj))                  # 42.0 (calls __float__)
-print(str(obj))                   # "42" (calls __str__)
-print(bool(obj))                  # True (calls __bool__)
-```
-
-### List and Dict Conversions
-```
-# To list
-obj = Lib0((1, 2, 3))
-print(obj.list())                  # [1, 2, 3]
-
+# From a value
+obj = Lib0(42)
 obj = Lib0("hello")
-print(obj.list())                  # ['h', 'e', 'l', 'l', 'o']
-
-# To dict
-obj = Lib0({"a": 1, "b": 2})
-print(obj.dict())                  # {"a": 1, "b": 2}
-```
-
-## 3. Container Operations
-### Sequence Types Support
-```
-# Lists
-obj = Lib0([10, 20, 30, 40, 50])
-print(obj[1])                      # 20
-print(obj[1:4])                    # [20, 30, 40]
-print(obj[-1])                     # 50
-
-# Strings
-obj = Lib0("hello")
-print(obj[1])                      # 'e'
-print(obj[1:4])                    # "ell"
-
-# Tuples, ranges, bytes
-obj = Lib0((1, 2, 3))
-print(obj[0])                      # 1
-
-obj = Lib0(range(10))
-print(obj[5])                      # 5
-print(obj[2:5])                    # range(2, 5)
-```
-
-### Mutable vs Immutable
-```
-# Mutable - can modify
 obj = Lib0([1, 2, 3])
-obj[0] = 99                        # OK: [99, 2, 3]
-obj[1:3] = [88, 77]                # OK: [99, 88, 77]
 
-obj = Lib0(bytearray(b"abc"))
-obj[0] = 122                       # OK: bytearray(b"zbc")
+# From a flat dict
+obj = Lib0({"x": 1, "y": 2})
 
-# Immutable - cannot modify
-obj = Lib0("hello")
-# obj[0] = "H"                     # TypeError: 'str' object does not support item assignment
-
-obj = Lib0((1, 2, 3))
-# obj[0] = 99                      # TypeError: 'tuple' object does not support item assignment
-
-obj = Lib0(b"abc")
-# obj[0] = 122                     # TypeError: 'bytes' object does not support item assignment
+# From a nested dict — use R=True to recursively wrap all levels
+obj = Lib0({"a": {"b": {"c": 3}}}, R=True)
+print(obj.a.b.c)  # 3
 ```
 
-### Container Methods
-```
-obj = Lib0({"a": 1, "b": 2, "c": 3})
+> **Important:** `Lib0(nested_dict)` only wraps the top level. Use `R=True` for full recursive wrapping of multidimensional dicts.
 
-print(len(obj))                    # 3
-print("a" in obj)                  # True
+---
 
-# Iteration
-for key in obj:
-    print(key, obj[key])           # a 1, b 2, c 3
+### Attribute access
 
-# Deletion
-del obj["b"]                       # Removes key "b"
-del obj.a                          # Removes attribute "a"
-```
+Lib0 objects support dot notation for reading and writing attributes. Missing keys are auto-created as empty Lib0 objects.
 
-## 4. Operator Overloading
-### Arithmetic Operations
-```
-a = Lib0(10)
-b = Lib0(5)
-
-print(a + b)                       # 15
-print(a - b)                       # 5
-print(a * b)                       # 50
-print(a / b)                       # 2.0
-print(a // b)                      # 2
-print(a % b)                       # 0
-print(a ** b)                      # 100000
-
-# In-place operations
-a += 5                            # a becomes Lib0(15)
-a *= 2                            # a becomes Lib0(30)
-```
-
-### Comparison Operations
-```
-a = Lib0(10)
-b = Lib0(5)
-
-print(a > b)                       # True
-print(a < b)                       # False
-print(a == 10)                     # True
-print(a != b)                      # True
-print(a >= 10)                     # True
-print(a <= 20)                     # True
-```
-
-### Unary Operations
-```
-obj = Lib0(5)
-print(-obj)                        # -5
-print(+obj)                        # 5
-print(abs(Lib0(-5)))               # 5
-print(~Lib0(5))                    # -6 (bitwise NOT)
-```
-
-## 5. Special Features
-### _last Tracking
-```
+```python
 obj = Lib0()
-obj.x = 10
-print(obj._last)                   # 10 (last assigned value)
 
-obj.y.z = {"a": 1}
-print(obj._last)                   # {"a": 1} (last assigned value)
-
-obj.a.b.c = "deep"
-print(obj._last)                   # "deep"
-```
-
-### Root Reference System
-```
-root = Lib0()
-branch = Lib0({"x": 1}, ROOT=root)
-leaf = Lib0({"y": 2}, ROOT=root)
-
-leaf.value = 100
-print(root._last)                  # 100 (updated through root chain)
-```
-
-## 6. Helper Functions
-### dict2lib0() - Recursive Conversion
-```
-data = {"app": {"name": "MyApp", "version": "1.0", "settings": {"debug": True}}}
-obj = dict2lib0(data)
-
-print(obj.app.name)                # "MyApp"
-print(obj.app.settings.debug)      # True
-print(type(obj.app.settings))      # <class 'Lib0'>
-```
-
-### lib02dict() - Reverse Conversion
-```
-obj = Lib0()
-obj.config.host = "localhost"
+obj.name = "lib0"
+obj.config.host = "localhost"   # auto-creates config as empty Lib0
 obj.config.port = 8080
 
-data = lib02dict(obj)
-print(data)                        # {"config": {"host": "localhost", "port": 8080}}
-print(type(data))                  # <class 'dict'>
+print(obj.name)         # lib0
+print(obj.config.host)  # localhost
 ```
 
-### Round-trip Conversion
-```
-original = {"a": {"b": {"c": [1, 2, 3]}}}
-wrapped = dict2lib0(original)
-unwrapped = lib02dict(wrapped)
-print(original == unwrapped)       # True
-```
+---
 
-## 7. Advanced Usage
-### Configuration Management
-```
-config = dict2lib0({
-    "app": {
-        "name": "MyApp",
-        "version": "1.0.0"
-    },
-    "database": {
-        "host": "localhost",
-        "port": 5432,
-        "credentials": {
-            "username": "admin",
-            "password": "secret"
-        }
-    }
-})
+### Bracket access
 
-# Easy access
-if config.database.credentials.username == "admin":
-    print("Admin access granted")
+```python
+obj = Lib0()
+obj["x"] = 10
+print(obj["x"])         # 10
 
-# Dynamic updates
-config.database.pool_size = 20
-config.features.new_feature.enabled = True
+# Works on lists and strings too
+obj = Lib0([10, 20, 30])
+print(obj[1])           # 20
+print(obj[0:2])         # [10, 20]
 ```
 
-### Data Validation Pipeline
-```
-def process_user_data(raw_data):
-    user = dict2lib0(raw_data)
-    
-    # Type conversions with validation
-    user.age = user.age.int()      # Convert to int
-    if user.age < 18:
-        raise ValueError("Must be 18 or older")
-    
-    user.email = user.email.str().lower().strip()
-    if "@" not in user.email:
-        raise ValueError("Invalid email")
-    
-    return lib02dict(user)
+---
+
+### Type conversions
+
+#### Mutation methods — modify the object in place, return `self` for chaining
+
+```python
+obj = Lib0("42")
+obj._int()              # obj._data is now 42
+obj._float()            # obj._data is now 42.0
+obj._str()._int()       # chaining: "42.0" → 42
 ```
 
-### API Response Wrapping
-```
-import requests
+#### Conversion methods — return the converted value without modifying the object
 
-response = requests.get("https://api.example.com/users/1")
-data = dict2lib0(response.json())
-
-print(f"User: {data.user.name}")
-print(f"Email: {data.user.email}")
-print(f"Joined: {data.user.created_at}")
-
-# Safe access with defaults
-posts = data.user.recent_posts or []
+```python
+obj = Lib0("42")
+print(obj.int())        # 42
+print(obj.float())      # 42.0
+print(obj.str())        # "42"
+print(obj.bool())       # True
 ```
 
-### Context Manager Usage
+#### Python built-in conversions
+
+```python
+obj = Lib0("42")
+print(int(obj))         # 42
+print(float(obj))       # 42.0
+print(str(obj))         # "42"
+print(bool(obj))        # True
 ```
+
+---
+
+### Operators
+
+All standard Python operators are supported and transparently unwrap the inner value:
+
+```python
+a = Lib0(10)
+b = Lib0(3)
+
+print(a + b)    # 13
+print(a - b)    # 7
+print(a * b)    # 30
+print(a / b)    # 3.333...
+print(a // b)   # 3
+print(a % b)    # 1
+print(a ** b)   # 1000
+print(a > b)    # True
+print(a == 10)  # True
+
+a += 5          # a._data becomes 15
+```
+
+---
+
+### Container operations
+
+```python
+obj = Lib0({"a": 1, "b": 2})
+print(len(obj))         # 2
+print("a" in obj)       # True
+del obj.a
+
+for key in obj:
+    print(key)          # b
+```
+
+---
+
+### Dict ↔ Lib0 conversion
+
+```python
+from lib0_package import dict2lib0, lib02dict
+
+data = {"server": {"host": "localhost", "port": 8080}}
+
+# dict → Lib0 (recursive, preferred over R=True for complex cases)
+obj = dict2lib0(data)
+print(obj.server.host)  # localhost
+
+# Lib0 → dict
+back = lib02dict(obj)
+print(back)             # {"server": {"host": "localhost", "port": 8080}}
+
+# Round-trip is lossless
+assert data == lib02dict(dict2lib0(data))
+```
+
+> `dict2lib0` and `lib02dict` are the "raw" way to do recursive conversions. For simple cases, `Lib0(data, R=True)` is equivalent.
+
+---
+
+## Part 2 — Edge Cases & Advanced Usage
+
+### `PRESERVE_NONE`
+
+By default, `Lib0(None)` creates an empty dict `{}`. Use `PRESERVE_NONE=True` to actually store `None`:
+
+```python
+obj = Lib0(None)                        # _data = {}
+obj = Lib0(None, PRESERVE_NONE=True)    # _data = None
+```
+
+---
+
+### Mutable vs immutable inner types
+
+Lib0 respects the mutability of its inner value:
+
+```python
+# Mutable — item assignment works
+obj = Lib0([1, 2, 3])
+obj[0] = 99             # OK
+
+# Immutable — raises TypeError
+obj = Lib0("hello")
+obj[0] = "H"            # TypeError: str does not support item assignment
+
+obj = Lib0((1, 2, 3))
+obj[0] = 99             # TypeError: tuple does not support item assignment
+```
+
+---
+
+### Auto-creation behavior
+
+Accessing a missing key on a dict-backed Lib0 silently creates it as an empty Lib0:
+
+```python
+obj = Lib0()
+x = obj.nonexistent     # creates obj.nonexistent = Lib0()
+obj.a.b.c = "deep"      # creates the full chain
+```
+
+This is intentional for ergonomic nested writes, but be careful when checking for key existence — reading a key creates it.
+
+---
+
+### `dict()` with recursive unwrap
+
+```python
+obj = Lib0({"a": {"b": 1}}, R=True)
+
+obj.dict()      # returns top-level dict only (shallow)
+obj.dict(R=True)  # returns fully unwrapped nested dict via lib02dict
+```
+
+---
+
+### Context manager
+
+```python
 with Lib0() as session:
     session.user.id = 123
     session.user.name = "John"
-    session.cart.items = ["item1", "item2"]
-    
-    # __exit__ called automatically here
+# __exit__ is a no-op, but the pattern is supported
 ```
 
-## 8. Error Handling
-### Clear Error Messages
-```
-obj = Lib0("not_a_number")
-try:
-    obj._int()
-except TypeError as e:
-    print(e)  # "Cannot convert str to int."
+---
 
-obj = Lib0([1, 2, 3])
-try:
-    obj.dict()
-except TypeError as e:
-    print(e)  # "Cannot convert list to dict."
-```
+### Error types
 
-### Index Errors
-```
-obj = Lib0([1, 2, 3])
-try:
-    print(obj[10])
-except IndexError as e:
-    print(e)  # "Index out of range: 10, length: 3"
-```
+| Exception | When |
+|---|---|
+| `Lib0Error` | General access or operation failure |
+| `TypeLockedError` | Assignment violates a type lock |
+| `ConstantAssignmentError` | Reassignment of a constant |
 
-### Attribute Errors
+---
+
+## Part 3 — Explicit Types
+
+Explicit types are variable metadata constraints baked into Lib0 objects. They allow you to enforce C-like type safety directly in Python using a clean syntax.
+
+### Concept
+
+A `TypedVar` object acts as a **typed variable initializer** for a shared Lib0 environment. The syntax mirrors C-style declarations:
+
 ```
-obj = Lib0()
-try:
-    print(obj.nonexistent.deep.value)
-except AttributeError as e:
-    print(e)  # "No attribute 'nonexistent'"
+int a = 3;       →    Int.a = 3
+float b = 3.14;  →    Float.b = 3.14
 ```
 
-## 9. Performance Considerations
-### When to Use Lib0
-* Good for: Configuration, API responses, data transformation, prototyping
-* Less ideal for: High-performance numeric computing, large-scale data processing
+---
 
-### Memory Usage
-* Each value is wrapped in a Lib0 object
-* Root tracking adds minor overhead
-* Use lib02dict() for serialization/storage
+### `SetExplicitTypes` — quick setup
 
-## 10. Complete API Reference
-### Lib0 Class Methods
+```python
+from lib0_package import Lib0, SetExplicitTypes
 
-* __init__(DATA=None, ROOT=None, PRESERVE_NONE=False)
-* _int(), _float(), _bool(), _str(), _list(), _dict() - Mutation methods
-* int(), float(), bool(), str(), list(), dict() - Conversion methods
-* repr(), format() - Representation methods
+env = Lib0()
+Int, Float, Str, Tuple, List, Dict, Bool, Range, Byte, Const = SetExplicitTypes(env)
 
-### Special Methods (Dunder)
-* All arithmetic: __add__, __sub__, __mul__, etc.
-* All comparison: __eq__, __lt__, __gt__, etc.
-* Container: __getitem__, __setitem__, __len__, __iter__
-* Conversion: __int__, __float__, __str__, __bool__
+Int.a = 3           # creates env.a = 3, type-locked to int
+Float.b = 3.14      # creates env.b = 3.14, type-locked to float
+Str.c = "hello"     # creates env.c = "hello", type-locked to str
 
-### Helper Functions
-* dict2lib0(data) - Recursively convert dict to Lib0
-* lib02dict(lib_obj) - Recursively convert Lib0 to dict
-
-## 11. Examples Repository
-### Quick Examples
+print(env.a)        # 3
+print(env.b)        # 3.14
 ```
-# 1. Build nested config
-config = Lib0()
-config.server.host = "0.0.0.0"
-config.server.port = 8000
-config.features.api.enabled = True
 
-# 2. Process form data
-form = dict2lib0(request.form)
-user_age = form.age.int()
-user_name = form.name.str().title()
+All 10 generators share the same `env` object — it is the variable environment.
 
-# 3. JSON manipulation
-import json
-data = Lib0(json.loads(json_string))
-data.timestamp = data.timestamp.int()  # Convert string timestamp to int
+---
 
-# 4. Data transformation pipeline
-results = [
-    item.score.float() * 1.1  # 10% bonus
-    for item in data.scores
-    if item.score.float() > 50
-]
+### Type locking
+
+Once a variable is created through a typed initializer, its type cannot change:
+
+```python
+Int.a = 3
+Int.a = 10      # OK — same type
+Int.a = "ten"   # TypeLockedError: Expected assignment of 'a' to be int, got str
 ```
+
+Mutation methods (`._int()`, `._float()`, etc.) also respect type locks:
+
+```python
+# If env.a is type-locked to int:
+env.a._float()  # TypeLockedError: Cannot convert int to float. Type is locked.
+```
+
+---
+
+### Default values
+
+Accessing an uninitialised typed variable auto-initialises it with the type's default:
+
+```python
+Int.x           # creates env.x = 0
+Float.y         # creates env.y = 0.0
+Str.z           # creates env.z = ""
+Bool.flag       # creates env.flag = False
+```
+
+---
+
+### Constants
+
+Constants are type-locked AND cannot be reassigned after creation:
+
+```python
+Const.MAX_RETRIES = 5
+Const.API_URL = "https://api.example.com"
+
+Const.MAX_RETRIES = 10  # ConstantAssignmentError: Cannot reassign constant 'MAX_RETRIES'
+```
+
+Reading a constant that doesn't exist raises `ConstantAssignmentError` — constants must always be initialised with a value.
+
+---
+
+### Manual Lib0 creation with metadata
+
+You can create type-locked or constant Lib0 objects directly without using the typed initializers:
+
+```python
+# Type-locked
+x = Lib0(42, TYPE_LOCKED=True)
+x._data = "oops"    # This bypasses the lock — always go through __setattr__
+
+# Constant
+y = Lib0(100, CONST=True)
+
+# Planned — type-locked collection (child type enforcement, not yet implemented)
+z = Lib0([1, 2, 3], TYPE_LOCKED=True, CHILD_TYPE=int)
+# CHILD_TYPE will enforce that every element of the list must be of type int
+```
+
+---
+
+### Custom `TypedVar`
+
+You can create your own typed initializer for any type, including custom classes:
+
+```python
+from lib0_package import Lib0
+from lib0_package.explicite_types import TypedVar
+
+env = Lib0()
+MyClass = TypedVar(env, MyCustomClass, MyCustomClass())
+
+MyClass.obj = MyCustomClass(...)    # OK
+MyClass.obj = "wrong"               # ExpliciteTypeError
+```
+
+---
+
+### Summary table
+
+| Feature | Syntax | Behaviour |
+|---|---|---|
+| Typed variable | `Int.a = 3` | Type-locked to `int`, default `0` |
+| Constant | `Const.a = 3` | Type-locked + cannot reassign |
+| Type mutation block | `env.a._float()` | Blocked if type-locked |
+| Planned: child type | `CHILD_TYPE=int` | Will enforce element types in collections |
